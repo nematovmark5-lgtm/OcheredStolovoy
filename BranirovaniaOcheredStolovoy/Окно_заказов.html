@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Окно заказов - Столовая</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .orders-container {
+            display: flex;
+            min-height: 500px;
+        }
+        .column {
+            flex: 1;
+            padding: 20px;
+            border-right: 2px solid #e0e0e0;
+        }
+        .column:last-child {
+            border-right: none;
+        }
+        .column-header {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        .preparing-header {
+            background-color: #ff9800;
+            color: white;
+        }
+        .ready-header {
+            background-color: #4caf50;
+            color: white;
+        }
+        .order-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            padding: 10px;
+        }
+        .order-number {
+            background-color: #2196f3;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+        .order-number:hover {
+            transform: scale(1.05);
+        }
+        .preparing-order {
+            background-color: #ff9800;
+        }
+        .ready-order {
+            background-color: #4caf50;
+        }
+        .no-orders {
+            text-align: center;
+            color: #757575;
+            font-style: italic;
+            padding: 20px;
+        }
+        .refresh-info {
+            text-align: center;
+            padding: 10px;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            font-size: 14px;
+        }
+        .new-order {
+            animation: pulse 1s ease-in-out;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            Окно заказов - Столовая
+        </div>
+        
+        <div class="orders-container">
+            <div class="column">
+                <div class="column-header preparing-header">
+                    Готовятся
+                </div>
+                <div id="preparingOrders" class="order-list">
+                    <div class="no-orders">Нет заказов в процессе приготовления</div>
+                </div>
+            </div>
+            
+            <div class="column">
+                <div class="column-header ready-header">
+                    Готовы к выдаче
+                </div>
+                <div id="readyOrders" class="order-list">
+                    <div class="no-orders">Нет готовых заказов</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="refresh-info">
+            Автоматическое обновление каждые 2 секунды
+        </div>
+    </div>
+
+    <!-- Контейнер для аудио элементов -->
+    <div id="audioContainer" style="display: none;"></div>
+
+    <script>
+        let previousOrders = [];
+        let audioElements = [];
+        const MAX_AUDIO_ELEMENTS = 5;
+        const SERVER_URL = 'http://192.168.1.215:5000'; 
+
+        // Функция для получения заказов с сервера
+        async function fetchOrders() {
+            try {
+                const response = await fetch(`${SERVER_URL}/api/orders`);
+                if (!response.ok) {
+                    throw new Error(`Ошибка HTTP: ${response.status}`);
+                }
+                const orders = await response.json();
+                checkForNewReadyOrders(orders);
+                displayOrders(orders);
+                previousOrders = orders;
+            } catch (error) {
+                console.error('Ошибка при получении заказов:', error);
+                // Показываем сообщение об ошибке
+                document.getElementById('preparingOrders').innerHTML = 
+                    '<div class="no-orders">Ошибка подключения к серверу</div>';
+                document.getElementById('readyOrders').innerHTML = 
+                    '<div class="no-orders">Ошибка подключения к серверу</div>';
+            }
+        }
+
+        // Функция для проверки новых готовых заказов
+        function checkForNewReadyOrders(currentOrders) {
+            if (previousOrders.length === 0) return;
+
+            const currentReadyOrders = currentOrders.filter(order => order.status === 'Готово');
+            const previousReadyOrders = previousOrders.filter(order => order.status === 'Готово');
+
+            // Находим заказы, которые стали готовыми
+            const newReadyOrders = currentReadyOrders.filter(currentOrder => 
+                !previousReadyOrders.some(prevOrder => prevOrder.number_order === currentOrder.number_order)
+            );
+
+            // Если есть новые готовые заказы, воспроизводим звук для каждого
+            if (newReadyOrders.length > 0) {
+                newReadyOrders.forEach((order, index) => {
+                    setTimeout(() => {
+                        playReadySound();
+                    }, index * 300);
+                });
+            }
+        }
+
+        // Функция для воспроизведения звука
+        function playReadySound() {
+            cleanupAudioElements();
+            
+            const audio = document.createElement('audio');
+            audio.preload = 'auto';
+            
+            const source = document.createElement('source');
+            source.src = 'gotov.mp3';
+            source.type = 'audio/mpeg';
+            
+            audio.appendChild(source);
+            audioContainer.appendChild(audio);
+            
+            audioElements.push(audio);
+            
+            if (audioElements.length > MAX_AUDIO_ELEMENTS) {
+                const oldestAudio = audioElements.shift();
+                oldestAudio.remove();
+            }
+            
+            audio.play().catch(error => {
+                console.log('Автовоспроизведение заблокировано:', error);
+            });
+            
+            audio.onended = function() {
+                const index = audioElements.indexOf(audio);
+                if (index > -1) {
+                    audioElements.splice(index, 1);
+                }
+                audio.remove();
+            };
+        }
+
+        // Функция для очистки завершенных аудио элементов
+        function cleanupAudioElements() {
+            audioElements = audioElements.filter(audio => {
+                if (audio.ended) {
+                    audio.remove();
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        // Функция для отображения заказов
+        function displayOrders(orders) {
+            const preparingContainer = document.getElementById('preparingOrders');
+            const readyContainer = document.getElementById('readyOrders');
+            
+            preparingContainer.innerHTML = '';
+            readyContainer.innerHTML = '';
+            
+            const preparingOrders = orders.filter(order => order.status === 'Готовится');
+            const readyOrders = orders.filter(order => order.status === 'Готово');
+            
+            if (preparingOrders.length === 0) {
+                preparingContainer.innerHTML = '<div class="no-orders">Нет заказов в процессе приготовления</div>';
+            } else {
+                preparingOrders.forEach(order => {
+                    const orderElement = document.createElement('div');
+                    orderElement.className = 'order-number preparing-order';
+                    orderElement.textContent = order.number_order;
+                    preparingContainer.appendChild(orderElement);
+                });
+            }
+            
+            if (readyOrders.length === 0) {
+                readyContainer.innerHTML = '<div class="no-orders">Нет готовых заказов</div>';
+            } else {
+                readyOrders.forEach(order => {
+                    const orderElement = document.createElement('div');
+                    orderElement.className = 'order-number ready-order';
+                    
+                    const isNewReady = !previousOrders.some(prevOrder => 
+                        prevOrder.number_order === order.number_order && prevOrder.status === 'Готово'
+                    );
+                    
+                    if (isNewReady) {
+                        orderElement.classList.add('new-order');
+                    }
+                    
+                    orderElement.textContent = order.number_order;
+                    readyContainer.appendChild(orderElement);
+                });
+            }
+        }
+
+        // Запускаем получение заказов при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchOrders();
+            
+            setInterval(fetchOrders, 2000);
+            
+            document.body.addEventListener('click', function() {
+                const testAudio = document.createElement('audio');
+                testAudio.play().then(() => {
+                    testAudio.pause();
+                }).catch(() => {});
+            });
+        });
+    </script>
+</body>
+</html>

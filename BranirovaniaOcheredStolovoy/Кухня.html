@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Монитор кухни</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .orders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .order-card {
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 15px;
+            background-color: #fff;
+            transition: all 0.3s ease;
+            position: relative;
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .order-card.ready {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+        
+        .order-card.completed {
+            border-color: #6c757d;
+            background-color: #f8f9fa;
+            opacity: 0.7;
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .order-number {
+            font-size: 16px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .order-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .status-preparing {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        .status-ready {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .status-completed {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .order-details {
+            margin-bottom: 12px;
+            flex-grow: 1;
+        }
+        
+        .order-item {
+            margin: 4px 0;
+            padding: 4px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .order-time {
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+        }
+        
+        .timer {
+            font-size: 13px;
+            font-weight: bold;
+            color: #28a745;
+            margin-top: 6px;
+            padding: 4px;
+            background-color: #f8fff9;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .timer.warning {
+            color: #ffc107;
+            background-color: #fff3cd;
+        }
+        
+        .timer.danger {
+            color: #dc3545;
+            background-color: #f8d7da;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .cooking-progress {
+            height: 6px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-green {
+            background-color: #28a745;
+        }
+        
+        .progress-yellow {
+            background-color: #ffc107;
+        }
+        
+        .progress-red {
+            background-color: #dc3545;
+        }
+        
+        .order-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+            text-align: center;
+        }
+        
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-ready {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-ready:hover {
+            background-color: #218838;
+        }
+        
+        .btn-complete {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-complete:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .no-orders {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 40px;
+            grid-column: 1 / -1;
+        }
+        
+        .sort-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .sort-btn {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .sort-btn.active {
+            background-color: #495057;
+        }
+        
+        .time-indicator {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+            text-align: center;
+        }
+        
+        .auto-refresh-info {
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .server-info {
+            text-align: center;
+            color: #28a745;
+            font-size: 12px;
+            margin-bottom: 10px;
+            padding: 5px;
+            background-color: #f8fff9;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍳 Монитор кухни</h1>
+        
+        <div class="server-info">
+            🌐 Подключено к серверу: 192.168.1.215:5000
+        </div>
+        
+        <div class="auto-refresh-info">
+            🔄 Автоматическое обновление каждые 2 секунды
+        </div>
+        
+        <div class="sort-controls">
+            <button class="sort-btn active" onclick="changeSortOrder('number_asc')">
+                По номеру (↑)
+            </button>
+            <button class="sort-btn" onclick="changeSortOrder('time_desc')">
+                По времени (↓)
+            </button>
+        </div>
+        
+        <div class="orders-grid" id="orders-container">
+            <div class="no-orders">Загрузка заказов...</div>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_BASE_URL = 'http://192.168.1.215:5000';
+        let currentSortOrder = 'number_asc';
+        let timers = {};
+        
+        // Функция для загрузки заказов
+        async function loadOrders() {
+            try {
+                const response = await fetch(`${SERVER_BASE_URL}/api/kitchen_orders`);
+                let orders = await response.json();
+                
+                const container = document.getElementById('orders-container');
+                
+                if (!orders || orders.length === 0) {
+                    container.innerHTML = '<div class="no-orders">Нет активных заказов</div>';
+                    return;
+                }
+                
+                // Сортируем заказы в зависимости от выбранного порядка
+                orders = sortOrders(orders, currentSortOrder);
+                
+                container.innerHTML = '';
+                
+                orders.forEach(order => {
+                    const orderCard = createOrderCard(order);
+                    container.appendChild(orderCard);
+                    
+                    // Запускаем таймер для заказов в статусе "Готовится"
+                    if (order.status === 'Готовится' && order.order_time) {
+                        startTimer(order.number_order, order.order_time);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Ошибка загрузки заказов:', error);
+                document.getElementById('orders-container').innerHTML = 
+                    '<div class="no-orders">Ошибка загрузки заказов. Проверьте подключение к серверу.</div>';
+            }
+        }
+        
+        // Функция запуска таймеров приготовления
+        function startTimer(orderNumber, orderTime) {
+            const orderTimeDate = new Date(orderTime);
+            const now = new Date();
+            const elapsedSeconds = Math.floor((now - orderTimeDate) / 1000);
+            
+            // Обновляем таймер сразу
+            updateTimer(orderNumber, elapsedSeconds);
+            
+            // Запускаем интервал обновления каждую секунду
+            if (timers[orderNumber]) {
+                clearInterval(timers[orderNumber]);
+            }
+            
+            timers[orderNumber] = setInterval(() => {
+                const now = new Date();
+                const elapsedSeconds = Math.floor((now - orderTimeDate) / 1000);
+                updateTimer(orderNumber, elapsedSeconds);
+            }, 1000);
+        }
+        
+        // Функция обновления отображения таймера
+        function updateTimer(orderNumber, elapsedSeconds) {
+            const timerElement = document.getElementById(`timer-${orderNumber}`);
+            const progressElement = document.getElementById(`progress-${orderNumber}`);
+            
+            if (!timerElement) return;
+            
+            const minutes = Math.floor(elapsedSeconds / 60);
+            const seconds = elapsedSeconds % 60;
+            
+            timerElement.textContent = `⏰ ${minutes} мин ${seconds.toString().padStart(2, '0')} сек`;
+            
+            // Меняем цвет таймера в зависимости от времени
+            if (minutes >= 1) { // Красный от 1 минуты
+                timerElement.className = 'timer danger';
+            } else if (minutes >= 0.4) { // Желтый от 40 секунд
+                timerElement.className = 'timer warning';
+            } else { // Зеленый до 40 секунд
+                timerElement.className = 'timer';
+            }
+            
+            // Обновляем прогресс-бар (максимум 60 секунд = 1 минута)
+            if (progressElement) {
+                const progressPercent = Math.min((elapsedSeconds / 60) * 100, 100);
+                progressElement.style.width = `${progressPercent}%`;
+                
+                // Меняем цвет прогресс-бара
+                if (elapsedSeconds >= 40) { // Красный от 40 секунд
+                    progressElement.className = 'progress-bar progress-red';
+                } else if (elapsedSeconds >= 20) { // Желтый от 20 секунд
+                    progressElement.className = 'progress-bar progress-yellow';
+                } else { // Зеленый до 20 секунд
+                    progressElement.className = 'progress-bar progress-green';
+                }
+            }
+        }
+        
+        // Функция остановки таймера
+        function stopTimer(orderNumber) {
+            if (timers[orderNumber]) {
+                clearInterval(timers[orderNumber]);
+                delete timers[orderNumber];
+                
+                const timerElement = document.getElementById(`timer-${orderNumber}`);
+                const progressElement = document.getElementById(`progress-${orderNumber}`);
+                
+                if (timerElement) {
+                    timerElement.textContent = '✅ Заказ готов';
+                    timerElement.className = 'timer';
+                    timerElement.style.color = '#28a745';
+                    timerElement.style.backgroundColor = '#d4edda';
+                }
+                
+                if (progressElement) {
+                    progressElement.style.width = '100%';
+                    progressElement.className = 'progress-bar progress-green';
+                }
+            }
+        }
+        
+        // Функция сортировки заказов
+        function sortOrders(orders, sortOrder) {
+            const sortedOrders = [...orders];
+            
+            switch(sortOrder) {
+                case 'number_asc':
+                    return sortedOrders.sort((a, b) => a.number_order - b.number_order);
+                
+                case 'time_desc':
+                    return sortedOrders.sort((a, b) => new Date(b.order_time) - new Date(a.order_time));
+                
+                default:
+                    return sortedOrders;
+            }
+        }
+        
+        // Функция изменения порядка сортировки
+        function changeSortOrder(order) {
+            currentSortOrder = order;
+            
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            loadOrders();
+        }
+        
+        // Функция создания карточки заказа
+        function createOrderCard(order) {
+            const card = document.createElement('div');
+            card.className = `order-card ${order.status === 'Готово' ? 'ready' : ''} ${order.status === 'Отдал заказ' ? 'completed' : ''}`;
+            
+            const statusClass = getStatusClass(order.status);
+            
+            card.innerHTML = `
+                <div class="order-header">
+                    <span class="order-number">#${order.number_order}</span>
+                    <span class="order-status ${statusClass}">${order.status}</span>
+                </div>
+                
+                <div class="order-details">
+                    <div class="order-item">🍽️ <strong>${order.food}</strong></div>
+                    <div class="order-item">🥤 <strong>${order.drink}</strong></div>
+                </div>
+                
+                <div class="order-time">
+                    📅 ${formatDateTime(order.order_time)}
+                </div>
+                
+                ${order.status === 'Готовится' ? `
+                    <div class="timer" id="timer-${order.number_order}">
+                        ⏰ 0 мин 00 сек
+                    </div>
+                    <div class="cooking-progress">
+                        <div class="progress-bar progress-green" id="progress-${order.number_order}" style="width: 0%"></div>
+                    </div>
+                    <div class="time-indicator">0-20с: 🟢 | 20-40с: 🟡 | 40-60с: 🔴</div>
+                ` : ''}
+                
+                ${order.status === 'Готово' ? `
+                    <div class="timer">
+                        ✅ Готов к выдаче
+                    </div>
+                ` : ''}
+                
+                <div class="order-actions">
+                    ${order.status === 'Готовится' ? 
+                        `<button class="btn-ready" onclick="markAsReady(${order.number_order})">✓ Готово</button>` : 
+                        `<button class="btn-ready btn-disabled" disabled>✓ Готово</button>`
+                    }
+                    
+                    ${order.status === 'Готово' ? 
+                        `<button class="btn-complete" onclick="completeOrder(${order.number_order})">✅ Отдал заказ</button>` : 
+                        `<button class="btn-complete btn-disabled" disabled>✅ Отдал заказ</button>`
+                    }
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        // Функция для получения класса статуса
+        function getStatusClass(status) {
+            switch(status) {
+                case 'Готовится': return 'status-preparing';
+                case 'Готово': return 'status-ready';
+                case 'Отдал заказ': return 'status-completed';
+                default: return 'status-preparing';
+            }
+        }
+        
+        // Функция форматирования даты и времени
+        function formatDateTime(dateTimeString) {
+            if (!dateTimeString) return 'Неизвестно';
+            
+            const date = new Date(dateTimeString);
+            return date.toLocaleTimeString('ru-RU');
+        }
+        
+        // Функция отметки заказа как готового
+        async function markAsReady(orderNumber) {
+            try {
+                const response = await fetch(`${SERVER_BASE_URL}/api/mark_ready`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ order_number: orderNumber })
+                });
+                
+                if (response.ok) {
+                    stopTimer(orderNumber);
+                    loadOrders();
+                } else {
+                    alert('Ошибка при обновлении статуса заказа');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при обновлении статуса заказа');
+            }
+        }
+        
+        // Функция отметки заказа как Отдал заказного
+        async function completeOrder(orderNumber) {
+            if (!confirm('Вы точно отдали заказ?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${SERVER_BASE_URL}/api/complete_order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ order_number: orderNumber })
+                });
+                
+                if (response.ok) {
+                    stopTimer(orderNumber);
+                    loadOrders();
+                } else {
+                    alert('Ошибка при выдаче заказа');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при выдаче заказа');
+            }
+        }
+        
+        // Автоматическое обновление каждые 2 секунды
+        setInterval(loadOrders, 2000);
+        
+        // Загружаем заказы при загрузке страницы
+        document.addEventListener('DOMContentLoaded', loadOrders);
+    </script>
+</body>
+</html>
